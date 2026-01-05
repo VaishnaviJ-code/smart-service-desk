@@ -53,14 +53,16 @@ class KBArticleViewSet(viewsets.ModelViewSet):
 
 class FAQViewSet(viewsets.ModelViewSet):
     """ViewSet for FAQ operations - PUBLIC READ ACCESS"""
-    queryset = FAQ.objects.all()
+    queryset = FAQ.objects.all().order_by('-created_at')
     serializer_class = FAQSerializer
     
     def get_permissions(self):
-        # Public can read, authenticated users can write
+        # Public can read
         if self.action in ['list', 'retrieve', 'search']:
-            return [permissions.AllowAny()]  # Changed from IsAuthenticated
-        return [permissions.IsAuthenticated()]
+            return [permissions.AllowAny()]
+        
+        # Only ADMIN (1) can write
+        return [permissions.IsAuthenticated(), IsAdminOrReadOnly()]  # Reuse logic or check role explicitly checking class IsAdminUser
     
     @action(detail=False, methods=['get'])
     def search(self, request):
