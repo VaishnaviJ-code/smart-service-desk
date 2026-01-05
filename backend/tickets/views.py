@@ -2,14 +2,17 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated 
+from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q, Count
-from .models import Ticket, Comment, Attachment
+from .models import Ticket, Comment, Attachment, CannedResponse
 from .serializers import (
     TicketSerializer,
     TicketCreateSerializer,
     TicketUpdateSerializer,
     CommentSerializer,
-    AttachmentSerializer
+    AttachmentSerializer,
+    CannedResponseSerializer, 
+    CannedResponseCreateSerializer
 )
 
 from django.contrib.auth import get_user_model
@@ -217,7 +220,115 @@ class CommentViewSet(viewsets.ReadOnlyModelViewSet):
             return Comment.objects.filter(ticket_id=ticket_id)
         return Comment.objects.all()
 
+class IsAgentOrAdmin(permissions.BasePermission):
+    """Only agents and admins can access canned responses."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in [1, 3]
 
+class CannedResponseViewSet(viewsets.ModelViewSet):
+    """
+    Agents create/manage their own canned responses.
+    Admins can see and manage all responses.
+    """
+    
+    permission_classes = [IsAgentOrAdmin]
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return CannedResponseCreateSerializer
+        return CannedResponseSerializer
+    
+    def get_queryset(self):
+        """
+        Agents see: their own + admin-created templates
+        Admins see: all templates
+        """
+        user = self.request.user
+        
+        queryset = CannedResponse.objects.filter(is_active=True)
+        
+        if user.role == 3:  # Agent
+            # See own templates + admin-created ones
+            queryset = queryset.filter(
+                Q(created_by=user) | Q(created_by__role=1)
+            )
+        # Admins see everything (no filter needed)
+        
+        # Search functionality
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(search_tags__icontains=search) | 
+                Q(canned_response__icontains=search)
+            )
+        
+        return queryset.order_by('-usage_count', 'search_tags')
+    
+    def perform_create(self, serializer):
+        """Set created_by to current user."""
+        serializer.save(created_by=self.request.user)
+    
+    def perform_update(self, serializer):
+        """Only allow editing own templates (or admin can edit all)."""
+        instance = self.get_object()
+        
+        # Admin can edit anything
+        if self.request.user.role == 1:
+            serializer.save()
+            return
+        
+        # Agents can only edit their own templates
+        if instance.created_by_id != self.request.user.id:
+            raise PermissionDenied("You can only edit your own templates")
+        
+        serializer.save()
+
+    
+    def perform_destroy(self, instance):
+        """Soft delete. Only allow deleting own templates (or admin can delete all)."""
+        # Admin can delete anything
+        if self.request.user.role == 1:
+            instance.is_active = False
+            instance.save(update_fields=['is_active'])
+            return
+        
+        # Agents can only delete their own templates
+        if instance.created_by_id != self.request.user.id:
+            raise PermissionDenied("You can only delete your own templates")
+        
+        instance.is_active = False
+        instance.save(update_fields=['is_active'])
+
+    
+    @action(detail=True, methods=['post'])
+    def use(self, request, pk=None):
+        """Track usage when agent uses this template."""
+        template = self.get_object()
+        template.increment_usage()
+        return Response({
+            'message': 'Usage tracked',
+            'usage_count': template.usage_count
+        })
+    
+    @action(detail=False, methods=['get'])
+    def autocomplete(self, request):
+        """
+        Auto-suggest templates based on typed shortcut.
+        GET /api/canned-responses/autocomplete/?q=hi
+        """
+        query = request.query_params.get('q', '').lower().strip()
+        
+        if not query:
+            return Response([])
+        
+        queryset = self.get_queryset()
+        
+        # Match search_tags that start with the query
+        matches = queryset.filter(search_tags__istartswith=query)[:5]
+        
+        serializer = self.get_serializer(matches, many=True)
+        return Response(serializer.data)
+    
 # 👇 Function-based view - OUTSIDE the class, at module level
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])

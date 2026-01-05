@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { MessageSquare, Send, User } from 'lucide-react';
 import { addComment } from '../../services/ticketApi';
+import CannedResponseSelector from './CannedResponseSelector';
+import { useAuth } from '../../context/AuthContext';
 
 const CommentSection = ({ ticket, onCommentAdded }) => {
+  const { user } = useAuth();
   const [commentText, setCommentText] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
+
+  // Handler for canned response insertion
+  const handleCannedResponseSelect = (content) => {
+    setCommentText(content);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +39,9 @@ const CommentSection = ({ ticket, onCommentAdded }) => {
   };
 
   const comments = ticket.comments || [];
+  
+  // Only agents and admins can use canned responses
+  const canUseCannedResponses = user && (user.role === 1 || user.role === 3);
 
   return (
     <div className="space-y-4">
@@ -110,15 +121,30 @@ const CommentSection = ({ ticket, onCommentAdded }) => {
           </div>
         )}
 
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={posting || !commentText.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            <Send className="h-4 w-4" />
-            {posting ? 'Posting...' : 'Post Comment'}
-          </button>
+        {/* ✅ ACTION BAR: Canned Responses + Submit Button */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Left side: Canned Response Selector (only for agents/admins) */}
+          {canUseCannedResponses && (
+            <CannedResponseSelector
+              onSelect={handleCannedResponseSelect}
+              ticketCategory={ticket.category}
+              customerName={ticket.created_by_name}
+              ticketId={ticket.id}
+              agentName={user?.full_name || user?.first_name}
+            />
+          )}
+
+          {/* Right side: Submit Button */}
+          <div className={!canUseCannedResponses ? 'w-full flex justify-end' : ''}>
+            <button
+              type="submit"
+              disabled={posting || !commentText.trim()}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              <Send className="h-4 w-4" />
+              {posting ? 'Posting...' : 'Post Comment'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

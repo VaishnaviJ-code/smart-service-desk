@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     TicketViewSet, 
     CommentViewSet, 
+    CannedResponseViewSet,
     recent_tickets_admin, 
     admin_stats, 
     ticket_stats,
@@ -18,6 +19,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r'tickets', TicketViewSet, basename='ticket')
 router.register(r'comments', CommentViewSet, basename='comment')
+router.register(r'canned-responses', CannedResponseViewSet, basename='canned-response')
 
 urlpatterns = [
     # Agent actions

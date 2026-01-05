@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.db.models import F 
 
 class Ticket(models.Model):
     CATEGORY_CHOICES = (
@@ -99,3 +100,46 @@ class SLAConfig(models.Model):
     
     def __str__(self):
         return f"{self.get_priority_display()} - {self.sla_hours}h"
+    
+class CannedResponse(models.Model):
+    """
+    Predefined text scripts for agents to respond to users.
+    Agents define their own shortcuts (search_tags).
+    """
+    
+    search_tags = models.CharField(
+        max_length=100, 
+        help_text="Shortcut keyword(s) for quick access (e.g., 'hi', 'password', 'thanks')",
+        db_index=True
+    )
+    canned_response = models.TextField(
+        help_text="Template content. Use {customer_name}, {ticket_id}, {agent_name} as variables"
+    )
+    
+    # Metadata (not in spec, but useful)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='canned_responses'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    usage_count = models.IntegerField(default=0)
+    
+    class Meta:
+        db_table = 'canned_responses'
+        ordering = ['-usage_count', 'search_tags']
+        indexes = [
+            models.Index(fields=['search_tags', 'is_active']),
+            models.Index(fields=['-usage_count']),
+        ]
+    
+    def __str__(self):
+        return f"/{self.search_tags} - {self.canned_response[:50]}"
+    
+    def increment_usage(self):
+        """Thread-safe usage increment."""
+        CannedResponse.objects.filter(pk=self.pk).update(usage_count=F('usage_count') + 1)
+        self.refresh_from_db(fields=['usage_count'])

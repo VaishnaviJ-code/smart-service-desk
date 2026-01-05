@@ -1,6 +1,12 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Users, MessageCircleQuestion } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  BookOpen, 
+  Users, 
+  MessageCircleQuestion,
+  MessageSquareText  // ✅ ADD THIS IMPORT
+} from "lucide-react";
 import { cn } from "../../utils/cn";
 
 const Sidebar = ({ role }) => {
@@ -15,11 +21,19 @@ const Sidebar = ({ role }) => {
       icon: LayoutDashboard
     });
   } else if (role === 3) {
-    items.push({
-      to: "/agent/dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard
-    });
+    // ✅ AGENT GETS TWO ITEMS
+    items.push(
+      {
+        to: "/agent/dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard
+      },
+      {
+        to: "/agent/quick-responses",
+        label: "Quick Responses",
+        icon: MessageSquareText
+      }
+    );
   } else if (role === 1) {
     // ✅ ADMIN GETS FOUR ITEMS
     items.push(
@@ -42,7 +56,11 @@ const Sidebar = ({ role }) => {
         to: "/admin/kb",
         label: "Knowledge Base",
         icon: BookOpen
-      }
+      },{
+      to: "/admin/quick-responses",  // ✅ ADD THIS
+      label: "Quick Responses",
+      icon: MessageSquareText
+    }
     );
   }
 

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Ticket, Comment, Attachment, SLAConfig
 from accounts.serializers import UserSerializer
+from .models import CannedResponse
 
 class AttachmentSerializer(serializers.ModelSerializer):
     """Serializer for file attachments."""
@@ -65,3 +66,27 @@ class SLAConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = SLAConfig
         fields = ['id', 'priority', 'priority_display', 'sla_hours']
+
+class CannedResponseSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    
+    class Meta:
+        model = CannedResponse
+        fields = [
+            'id', 'search_tags', 'canned_response',
+            'created_by', 'created_by_name', 
+            'created_at', 'updated_at', 'is_active', 'usage_count'
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'usage_count']
+
+class CannedResponseCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CannedResponse
+        fields = ['search_tags', 'canned_response', 'is_active']
+    
+    def validate_search_tags(self, value):
+        """Ensure search_tags is clean."""
+        value = value.lower().strip()
+        if not value:
+            raise serializers.ValidationError("Search tags cannot be empty")
+        return value

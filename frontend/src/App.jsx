@@ -15,8 +15,10 @@ import AdminKBManagement from './pages/AdminKBManagement';
 import AdminKBForm from './pages/AdminKBForm';
 import AdminFAQManagement from './pages/AdminFAQManagement';
 import AdminFAQForm from './pages/AdminFAQForm';
-import AdminFAQDetail from './pages/AdminFAQDetail'; // ✅ ADD
+import AdminFAQDetail from './pages/AdminFAQDetail';
 import Register from './pages/Register';
+import CannedResponseManagement from './pages/CannedResponseManagement';
+import AdminCannedResponseManagement from './pages/AdminCannedResponseManagement';
 import { useEffect } from "react";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -65,22 +67,30 @@ const App = () => {
 
       {/* PROTECTED ROUTES - Require authentication */}
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+        {/* USER ROUTES */}
         <Route path="/user/dashboard" element={<ProtectedRoute allowedRoles={[2]}><UserDashboard /></ProtectedRoute>} />
+        
+        {/* AGENT ROUTES */}
         <Route path="/agent/dashboard" element={<ProtectedRoute allowedRoles={[3]}><AgentDashboard /></ProtectedRoute>} />
+        <Route path="/agent/quick-responses" element={<ProtectedRoute allowedRoles={[1, 3]}><CannedResponseManagement /></ProtectedRoute>} />
+        
+        {/* ADMIN ROUTES */}
         <Route path="/admin" element={<ProtectedRoute allowedRoles={[1]}><AdminPanel /></ProtectedRoute>} />
-
-        {/* ✅ ADD THESE 3 ADMIN KB ROUTES */}
-        <Route path="/admin/kb" element={<ProtectedRoute allowedRoles={[1]}><AdminKBManagement /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute allowedRoles={[1]}><UserManagement /></ProtectedRoute>} />
+        <Route path="/admin/quick-responses" element={<ProtectedRoute allowedRoles={[1]}><AdminCannedResponseManagement /></ProtectedRoute>} />
+        
+        {/* Admin KB Routes */}
+        <Route path="/admin/kb" element={<ProtectedRoute allowedRoles={[1]}><AdminKBManagement /></ProtectedRoute>} />
         <Route path="/admin/kb/new" element={<ProtectedRoute allowedRoles={[1]}><AdminKBForm /></ProtectedRoute>} />
         <Route path="/admin/kb/edit/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminKBForm /></ProtectedRoute>} />
-
-        {/* ✅ ADD THESE FAQ ROUTES */}
+        
+        {/* Admin FAQ Routes */}
         <Route path="/admin/faq" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQManagement /></ProtectedRoute>} />
         <Route path="/admin/faq/new" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQForm /></ProtectedRoute>} />
         <Route path="/admin/faq/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQDetail /></ProtectedRoute>} />
         <Route path="/admin/faq/edit/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQForm /></ProtectedRoute>} />
 
+        {/* SHARED ROUTES */}
         <Route path="/tickets/:id" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><TicketDetail /></ProtectedRoute>} />
       </Route>
 
