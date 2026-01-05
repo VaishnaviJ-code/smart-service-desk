@@ -4,38 +4,54 @@ from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model."""
+    full_name = serializers.SerializerMethodField()  # 👈 if it's a computed field
     
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'date_joined']
+        fields = ['id', 'email', 'full_name', 'role', 'date_joined','is_active']
         read_only_fields = ['id', 'date_joined']
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"  # 👈 combine first + last
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for user registration."""
-    password = serializers.CharField(write_only=True, min_length=6)
-    password_confirm = serializers.CharField(write_only=True, min_length=6)
+    password = serializers.CharField(write_only=True, min_length=8)
+    password_confirm = serializers.CharField(write_only=True, required=False)
     
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password', 'password_confirm']
+        fields = ['email', 'first_name', 'last_name', 'password', 'password_confirm', 'role']
+        extra_kwargs = {
+            'role': {'required': False}
+        }
     
     def validate(self, data):
-        if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError("Passwords do not match")
+        password = data.get('password')
+        password_confirm = data.pop('password_confirm', None)
+        
+        if password_confirm and password != password_confirm:
+            raise serializers.ValidationError({"password": "Passwords do not match"})
+        
         return data
     
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        user = User.objects.create_user(
+        role = validated_data.pop('role', 2)
+        password = validated_data.pop('password')
+        
+        # ✅ DON'T set full_name - it's auto-computed from first_name + last_name
+        user = User.objects.create(
             email=validated_data['email'],
-            password=validated_data['password'],
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            role=2  # Default to regular user
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            role=role,
+            is_active=True
         )
+        user.set_password(password)
+        user.save()
+        
         return user
-
 
 class LoginSerializer(serializers.Serializer):
     """Serializer for user login."""

@@ -11,6 +11,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-change-in-producti
 
 DEBUG = True
 
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition

@@ -17,7 +17,9 @@ class Ticket(models.Model):
     
     STATUS_CHOICES = (
         (1, 'Open'),
-        (2, 'Closed'),
+        (2, 'In Progress'),
+        (3, 'Resolved'),
+        (4, 'Closed'),
     )
     
     subject = models.CharField(max_length=255)

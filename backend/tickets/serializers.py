@@ -23,25 +23,23 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class TicketSerializer(serializers.ModelSerializer):
-    """Serializer for tickets."""
-    created_by = UserSerializer(read_only=True)
-    assigned_to = UserSerializer(read_only=True)
-    comments = CommentSerializer(many=True, read_only=True)
-    attachments = AttachmentSerializer(many=True, read_only=True)
-    
-    category_display = serializers.CharField(source='get_category_display', read_only=True)
-    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
+    assigned_to_name = serializers.CharField(source='assigned_to.full_name', read_only=True, allow_null=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    comments = CommentSerializer(many=True, read_only=True) 
     
     class Meta:
         model = Ticket
         fields = [
-            'id', 'subject', 'description', 'category', 'category_display',
-            'priority', 'priority_display', 'status', 'status_display',
-            'created_at', 'updated_at', 'created_by', 'assigned_to',
-            'comments', 'attachments'
+            'id', 'subject', 'description', 'status', 'priority', 'category',  # ✅ Add category
+            'created_by', 'created_by_name', 'assigned_to', 'assigned_to_name',
+            'created_at', 'updated_at', 'status_display', 'priority_display', 
+            'category_display',  # ✅ Add category_display
+            "comments"
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
 
 
 class TicketCreateSerializer(serializers.ModelSerializer):
@@ -49,7 +47,7 @@ class TicketCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Ticket
-        fields = ['subject', 'description']
+        fields = ['subject', 'description', 'category', 'priority']
 
 
 class TicketUpdateSerializer(serializers.ModelSerializer):
