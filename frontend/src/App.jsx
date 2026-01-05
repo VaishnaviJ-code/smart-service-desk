@@ -11,8 +11,11 @@ import UserManagement from "./pages/UserManagement";
 import KnowledgeBase from './pages/KnowledgeBase';
 import KBArticleDetail from './pages/KBArticleDetail';
 import SupportPortalHome from './pages/SupportPortalHome';
-import AdminKBManagement from './pages/AdminKBManagement'; // ✅ ADD
-import AdminKBForm from './pages/AdminKBForm'; // ✅ ADD
+import AdminKBManagement from './pages/AdminKBManagement';
+import AdminKBForm from './pages/AdminKBForm';
+import AdminFAQManagement from './pages/AdminFAQManagement';
+import AdminFAQForm from './pages/AdminFAQForm';
+import AdminFAQDetail from './pages/AdminFAQDetail'; // ✅ ADD
 import Register from './pages/Register';
 import { useEffect } from "react";
 
@@ -71,6 +74,12 @@ const App = () => {
         <Route path="/admin/users" element={<ProtectedRoute allowedRoles={[1]}><UserManagement /></ProtectedRoute>} />
         <Route path="/admin/kb/new" element={<ProtectedRoute allowedRoles={[1]}><AdminKBForm /></ProtectedRoute>} />
         <Route path="/admin/kb/edit/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminKBForm /></ProtectedRoute>} />
+
+        {/* ✅ ADD THESE FAQ ROUTES */}
+        <Route path="/admin/faq" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQManagement /></ProtectedRoute>} />
+        <Route path="/admin/faq/new" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQForm /></ProtectedRoute>} />
+        <Route path="/admin/faq/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQDetail /></ProtectedRoute>} />
+        <Route path="/admin/faq/edit/:id" element={<ProtectedRoute allowedRoles={[1]}><AdminFAQForm /></ProtectedRoute>} />
 
         <Route path="/tickets/:id" element={<ProtectedRoute allowedRoles={[1, 2, 3]}><TicketDetail /></ProtectedRoute>} />
       </Route>

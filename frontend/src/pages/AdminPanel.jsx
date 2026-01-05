@@ -236,30 +236,24 @@ const AdminPanel = () => {
             System overview and management
           </p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => navigate('/admin/users')}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
-          >
-            <Users className="h-4 w-4" />
-            Manage Users
-          </button>
-          <div className="text-sm text-slate-500 self-center">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric'
-            })}
-          </div>
+        <div className="text-sm text-slate-500 self-center hidden lg:block">
+          {new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          })}
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+
+      {
+        error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )
+      }
 
       {/* Enhanced Stats Grid */}
       <section>
@@ -298,38 +292,40 @@ const AdminPanel = () => {
       </section>
 
       {/* Analytics Section */}
-      {analytics && (
-        <section className="grid gap-4 lg:grid-cols-2">
-          {/* Tickets by Category */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Category</h3>
-            <div className="space-y-2">
-              {Object.entries(analytics.tickets_by_category || {}).map(([category, count]) => (
-                <div key={category} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-700">{category}</span>
-                  <span className="font-medium text-slate-900">{count}</span>
-                </div>
-              ))}
+      {
+        analytics && (
+          <section className="grid gap-4 lg:grid-cols-2">
+            {/* Tickets by Category */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Category</h3>
+              <div className="space-y-2">
+                {Object.entries(analytics.tickets_by_category || {}).map(([category, count]) => (
+                  <div key={category} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-700">{category}</span>
+                    <span className="font-medium text-slate-900">{count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Tickets by Priority */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Priority</h3>
-            <div className="space-y-2">
-              {Object.entries(analytics.tickets_by_priority || {}).map(([priority, count]) => (
-                <div key={priority} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-700">{priority}</span>
-                  <span className={`font-medium ${priority === 'High' ? 'text-red-700' :
-                    priority === 'Medium' ? 'text-amber-700' :
-                      'text-green-700'
-                    }`}>{count}</span>
-                </div>
-              ))}
+            {/* Tickets by Priority */}
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Priority</h3>
+              <div className="space-y-2">
+                {Object.entries(analytics.tickets_by_priority || {}).map(([priority, count]) => (
+                  <div key={priority} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-700">{priority}</span>
+                    <span className={`font-medium ${priority === 'High' ? 'text-red-700' :
+                      priority === 'Medium' ? 'text-amber-700' :
+                        'text-green-700'
+                      }`}>{count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )
+      }
 
       {/* Agent Management */}
       <section className="space-y-4">
@@ -504,144 +500,148 @@ const AdminPanel = () => {
       </section>
 
       {/* Add Agent Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-slate-900">Create Agent</h3>
-            <form onSubmit={handleCreateAgent} className="mt-4 space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700">First Name</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Last Name</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-              </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-slate-700">Password</label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
-                  onClick={() => setShowPassword(!showPassword)}
+      {
+        showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-slate-900">Create Agent</h3>
+              <form onSubmit={handleCreateAgent} className="mt-4 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-xs font-medium text-slate-700">Password</label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <div className="relative">
+                  <label className="block text-xs font-medium text-slate-700">Confirm Password</label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.password_confirm}
+                    onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition"
+                  >
+                    Create Agent
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Reassign Modal */}
+      {
+        showReassignModal && selectedTicket && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+              <h3 className="text-lg font-semibold text-slate-900">Reassign Ticket</h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Ticket #{selectedTicket.id}: {selectedTicket.subject}
+              </p>
+              <div className="mt-4">
+                <label className="block text-xs font-medium text-slate-700 mb-2">
+                  Select Agent
+                </label>
+                <select
+                  value={selectedAgent}
+                  onChange={(e) => setSelectedAgent(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  <option value="">Choose an agent...</option>
+                  {agents.map(agent => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.full_name} ({agent.total_tickets || 0} tickets)
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="relative">
-                <label className="block text-xs font-medium text-slate-700">Confirm Password</label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.password_confirm}
-                  onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
+              <div className="flex justify-end gap-2 mt-6">
                 <button
                   type="button"
-                  className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowReassignModal(false);
+                    setSelectedTicket(null);
+                    setSelectedAgent("");
+                  }}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition"
+                  onClick={handleReassign}
+                  disabled={!selectedAgent}
+                  className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 transition"
                 >
-                  Create Agent
+                  Reassign
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Reassign Modal */}
-      {showReassignModal && selectedTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-slate-900">Reassign Ticket</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Ticket #{selectedTicket.id}: {selectedTicket.subject}
-            </p>
-            <div className="mt-4">
-              <label className="block text-xs font-medium text-slate-700 mb-2">
-                Select Agent
-              </label>
-              <select
-                value={selectedAgent}
-                onChange={(e) => setSelectedAgent(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="">Choose an agent...</option>
-                {agents.map(agent => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.full_name} ({agent.total_tickets || 0} tickets)
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowReassignModal(false);
-                  setSelectedTicket(null);
-                  setSelectedAgent("");
-                }}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReassign}
-                disabled={!selectedAgent}
-                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 transition"
-              >
-                Reassign
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

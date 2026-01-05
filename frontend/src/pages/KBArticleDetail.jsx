@@ -19,9 +19,6 @@ const KBArticleDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // ✅ ADD: Track where user came from
-  const isFromAdmin = document.referrer.includes('/admin/kb');
-
   useEffect(() => {
     loadArticle();
   }, [id]);
@@ -40,10 +37,9 @@ const KBArticleDetail = () => {
     }
   };
 
-  // ✅ ADD: Delete handler
   const handleDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete "${article.title}"?`)) return;
-    
+
     try {
       await deleteKBArticle(id);
       navigate('/admin/kb');
@@ -52,9 +48,9 @@ const KBArticleDetail = () => {
     }
   };
 
-  // ✅ ADD: Smart back navigation
+  // Smart back navigation for admins
   const handleBack = () => {
-    if (isFromAdmin && user?.role === 1) {
+    if (user?.role === 1) {
       navigate('/admin/kb');
     } else {
       navigate('/kb');
@@ -123,7 +119,7 @@ const KBArticleDetail = () => {
             <BookOpen className="h-6 w-6 text-primary-600" />
             <span className="font-semibold text-slate-900">Knowledge Base</span>
           </Link>
-          
+
           <div className="flex items-center gap-4">
             <Link to="/kb" className="text-sm text-slate-700 hover:text-slate-900">
               Browse Articles
@@ -144,7 +140,7 @@ const KBArticleDetail = () => {
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to {isFromAdmin && user?.role === 1 ? 'Admin KB' : 'Knowledge Base'}</span>
+            <span>Back to {user?.role === 1 ? 'Admin KB' : 'Knowledge Base'}</span>
           </button>
 
           {/* ✅ ADD: Admin-only action buttons */}

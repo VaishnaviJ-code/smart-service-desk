@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, BookOpen } from "lucide-react"; // ✅ ADD ICONS
+import { LayoutDashboard, BookOpen, Users, MessageCircleQuestion } from "lucide-react";
 import { cn } from "../../utils/cn";
 
 const Sidebar = ({ role }) => {
@@ -9,29 +9,39 @@ const Sidebar = ({ role }) => {
   const items = [];
 
   if (role === 2) {
-    items.push({ 
-      to: "/user/dashboard", 
+    items.push({
+      to: "/user/dashboard",
       label: "My Tickets",
-      icon: LayoutDashboard 
+      icon: LayoutDashboard
     });
   } else if (role === 3) {
-    items.push({ 
-      to: "/agent/dashboard", 
+    items.push({
+      to: "/agent/dashboard",
       label: "Dashboard",
-      icon: LayoutDashboard 
+      icon: LayoutDashboard
     });
   } else if (role === 1) {
-    // ✅ ADMIN GETS TWO ITEMS
+    // ✅ ADMIN GETS FOUR ITEMS
     items.push(
-      { 
-        to: "/admin", 
+      {
+        to: "/admin",
         label: "Admin Panel",
-        icon: LayoutDashboard 
+        icon: LayoutDashboard
       },
-      { 
-        to: "/admin/kb", 
+      {
+        to: "/admin/users",
+        label: "User Management",
+        icon: Users
+      },
+      {
+        to: "/admin/faq",
+        label: "FAQ Management",
+        icon: MessageCircleQuestion
+      },
+      {
+        to: "/admin/kb",
         label: "Knowledge Base",
-        icon: BookOpen 
+        icon: BookOpen
       }
     );
   }

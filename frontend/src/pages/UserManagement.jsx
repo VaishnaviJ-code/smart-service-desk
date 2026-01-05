@@ -36,8 +36,10 @@ const UserManagement = () => {
             await changeUserRole(userId, newRole);
             // Update local state
             setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+            alert("User role updated successfully!");
         } catch (err) {
-            alert("Failed to update role");
+            const msg = err.response?.data?.error || "Failed to update role";
+            alert(msg);
             console.error(err);
         } finally {
             setUpdating(null);
