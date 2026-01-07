@@ -1,6 +1,9 @@
 from django.db import models
 from django.conf import settings
 from django.db.models import F 
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
 
 class Ticket(models.Model):
     CATEGORY_CHOICES = (
@@ -100,7 +103,8 @@ class SLAConfig(models.Model):
     
     def __str__(self):
         return f"{self.get_priority_display()} - {self.sla_hours}h"
-    
+
+
 class CannedResponse(models.Model):
     """
     Predefined text scripts for agents to respond to users.
@@ -116,7 +120,7 @@ class CannedResponse(models.Model):
         help_text="Template content. Use {customer_name}, {ticket_id}, {agent_name} as variables"
     )
     
-    # Metadata (not in spec, but useful)
+    # Metadata
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -143,3 +147,36 @@ class CannedResponse(models.Model):
         """Thread-safe usage increment."""
         CannedResponse.objects.filter(pk=self.pk).update(usage_count=F('usage_count') + 1)
         self.refresh_from_db(fields=['usage_count'])
+
+# RAG Index Auto-Update Signals
+@receiver(post_save, sender='knowledge.KBArticle')  # ✅ String reference
+def update_rag_index_on_save(sender, instance, created, **kwargs):
+    """Update RAG index when KB article is created or updated."""
+    try:
+        if instance.status == 'published':
+            from .rag_service import get_rag_service
+            rag = get_rag_service()
+            rag.add_article(
+                article_id=instance.id,
+                title=instance.title,
+                content=instance.content,
+                tags=instance.tags
+            )
+        else:
+            # Remove from index if unpublished
+            from .rag_service import get_rag_service
+            rag = get_rag_service()
+            rag.remove_article(instance.id)
+    except Exception as e:
+        print(f"Error updating RAG index: {e}")
+
+
+@receiver(post_delete, sender='knowledge.KBArticle')  # ✅ String reference
+def update_rag_index_on_delete(sender, instance, **kwargs):
+    """Remove from RAG index when KB article is deleted."""
+    try:
+        from .rag_service import get_rag_service
+        rag = get_rag_service()
+        rag.remove_article(instance.id)
+    except Exception as e:
+        print(f"Error removing from RAG index: {e}")

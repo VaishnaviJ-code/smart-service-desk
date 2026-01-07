@@ -17,8 +17,7 @@ import AdminFAQManagement from './pages/AdminFAQManagement';
 import AdminFAQForm from './pages/AdminFAQForm';
 import AdminFAQDetail from './pages/AdminFAQDetail';
 import Register from './pages/Register';
-import CannedResponseManagement from './pages/CannedResponseManagement';
-import AdminCannedResponseManagement from './pages/AdminCannedResponseManagement';
+import CannedResponseManagement from './components/CannedResponseManagement';
 import { useEffect } from "react";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -77,7 +76,7 @@ const App = () => {
         {/* ADMIN ROUTES */}
         <Route path="/admin" element={<ProtectedRoute allowedRoles={[1]}><AdminPanel /></ProtectedRoute>} />
         <Route path="/admin/users" element={<ProtectedRoute allowedRoles={[1]}><UserManagement /></ProtectedRoute>} />
-        <Route path="/admin/quick-responses" element={<ProtectedRoute allowedRoles={[1]}><AdminCannedResponseManagement /></ProtectedRoute>} />
+        <Route path="/admin/quick-responses" element={<ProtectedRoute allowedRoles={[1]}><CannedResponseManagement /></ProtectedRoute>} />
         
         {/* Admin KB Routes */}
         <Route path="/admin/kb" element={<ProtectedRoute allowedRoles={[1]}><AdminKBManagement /></ProtectedRoute>} />

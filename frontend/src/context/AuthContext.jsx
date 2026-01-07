@@ -5,8 +5,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);      // { id, email, role, ... }
-  const [loading, setLoading] = useState(true);
+  // ✅ Check if token exists immediately - if yes, assume logged in
+  const hasToken = !!localStorage.getItem("accessToken");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(hasToken); // Only load if token exists
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -15,26 +17,24 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("accessToken", data.tokens.access);
     localStorage.setItem("refreshToken", data.tokens.refresh);
     setUser(data.user);
-    redirectByRole(data.user.role, true); // Pass true for replace
+    redirectByRole(data.user.role, true);
   };
 
   const logout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     setUser(null);
-    
-    // Replace history so forward button doesn't work
     navigate("/login", { replace: true });
   };
 
   const redirectByRole = (role, replace = false) => {
     const path = role === 1 ? "/admin" : role === 3 ? "/agent/dashboard" : "/user/dashboard";
-    navigate(path, { replace }); // Use replace to prevent back button
+    navigate(path, { replace });
   };
 
-  // Load user profile on mount
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
+    
     if (!token) {
       setLoading(false);
       return;
@@ -44,43 +44,22 @@ export const AuthProvider = ({ children }) => {
       try {
         const profile = await fetchProfile();
         setUser(profile);
-      } catch {
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        setUser(null);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Prevent back/forward navigation issues
-  useEffect(() => {
-    const handlePopState = (e) => {
-      // If logged in and trying to go back to login
-      if (user && location.pathname === '/login') {
-        e.preventDefault();
-        const dashboardPath = user.role === 1 ? '/admin' : user.role === 3 ? '/agent/dashboard' : '/user/dashboard';
-        navigate(dashboardPath, { replace: true });
-      }
-      
-      // If logged out and trying to go to protected page
-      const protectedPaths = ['/admin', '/agent', '/user/dashboard', '/tickets'];
-      const isProtectedPath = protectedPaths.some(path => location.pathname.startsWith(path));
-      
-      if (!user && isProtectedPath) {
-        e.preventDefault();
-        navigate('/login', { replace: true });
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [user, location, navigate]);
-
   const value = {
     user,
     loading,
     isAuthenticated: !!user,
+    hasToken, // ✅ Export hasToken
     login,
     logout,
     redirectByRole,

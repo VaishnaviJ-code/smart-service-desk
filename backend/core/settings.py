@@ -15,6 +15,8 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+VECTOR_DB_PATH = os.path.join(BASE_DIR, 'vector_db')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

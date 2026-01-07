@@ -73,3 +73,35 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Must include email and password")
         
         return data
+    
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating user information"""
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    full_name = serializers.SerializerMethodField(read_only=True)  # 👈 Read-only computed field
+    
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'email', 'role', 'is_active', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True, 'required': False},
+            'first_name': {'required': False},
+            'last_name': {'required': False},
+        }
+    
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+    
+    def update(self, instance, validated_data):
+        # Handle password separately
+        password = validated_data.pop('password', None)
+        
+        # Update other fields (first_name, last_name, email, role, is_active)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Update password if provided
+        if password:
+            instance.set_password(password)
+        
+        instance.save()
+        return instance

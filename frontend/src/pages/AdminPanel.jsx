@@ -71,6 +71,9 @@ const AdminPanel = () => {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [selectedAgent, setSelectedAgent] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  
+  // ADD THIS - Form validation errors
+  const [formErrors, setFormErrors] = useState({});
 
   // Filter state for tickets
   const [filters, setFilters] = useState({
@@ -110,16 +113,12 @@ const AdminPanel = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, agentsData, analyticsData] = await Promise.all([
+      const [statsData, agentsData, analyticsData, ticketsData] = await Promise.all([
         getAdminDashboardStats(),
         getAgents(),
         getTicketAnalytics(),
+        fetchTickets({ sort: '-created_at' })
       ]);
-
-      // Load recent tickets separately using the correct endpoint
-      const ticketsData = await fetchTickets({ sort: '-created_at' });
-      setRecentTickets(ticketsData.slice(0, 10));
-
 
       setStats(statsData);
       setAgents(Array.isArray(agentsData) ? agentsData : []);
@@ -137,16 +136,84 @@ const AdminPanel = () => {
   const loadTickets = async () => {
     try {
       const data = await fetchTickets(filters);
-      setAllTickets(data);
+      setAllTickets(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Tickets load error:", err);
+      setAllTickets([]);
     }
   };
 
+  // UPDATED - Validation function with no leading/trailing spaces
+const validateForm = () => {
+  const errors = {};
+  
+  // Trim and check first name - no leading/trailing spaces
+  const trimmedFirstName = formData.first_name.trim();
+  if (!trimmedFirstName) {
+    errors.first_name = "First name cannot be empty or just spaces";
+  } else if (formData.first_name !== trimmedFirstName) {
+    errors.first_name = "First name cannot start or end with spaces";
+  }
+  
+  // Trim and check last name - no leading/trailing spaces
+  const trimmedLastName = formData.last_name.trim();
+  if (!trimmedLastName) {
+    errors.last_name = "Last name cannot be empty or just spaces";
+  } else if (formData.last_name !== trimmedLastName) {
+    errors.last_name = "Last name cannot start or end with spaces";
+  }
+  
+  // Check email
+  if (!formData.email.trim()) {
+    errors.email = "Email is required";
+  } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    errors.email = "Invalid email format";
+  }
+  
+  // Check password - NO spaces at all (leading, trailing, or middle)
+  if (!formData.password || formData.password.length < 8) {
+    errors.password = "Password must be at least 8 characters";
+  } else if (formData.password.includes(' ')) {
+    errors.password = "Password cannot contain any spaces";
+  } else if (formData.password !== formData.password.trim()) {
+    errors.password = "Password cannot start or end with spaces";
+  }
+  
+  // Check password confirmation
+  if (formData.password !== formData.password_confirm) {
+    errors.password_confirm = "Passwords do not match";
+  }
+  
+  return errors;
+};
+
+
+  // UPDATED - handleCreateAgent with validation
   const handleCreateAgent = async (e) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setFormErrors({});
+    setError("");
+    
+    // Validate form
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
     try {
-      await createAgent(formData);
+      // Trim the form data before sending
+      const cleanedData = {
+        email: formData.email.trim(),
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        password: formData.password,
+        password_confirm: formData.password_confirm,
+      };
+
+      await createAgent(cleanedData);
       setShowModal(false);
       setFormData({
         email: "",
@@ -155,11 +222,16 @@ const AdminPanel = () => {
         password: "",
         password_confirm: "",
       });
+      setFormErrors({});
       await loadData();
       setError("");
     } catch (err) {
       console.error("Create agent error:", err);
-      setError(`Failed to create agent: ${JSON.stringify(err.response?.data)}`);
+      const errorMsg = err.response?.data?.email?.[0] || 
+                       err.response?.data?.message || 
+                       err.message ||
+                       "Failed to create agent. Please try again.";
+      setError(errorMsg);
     }
   };
 
@@ -173,6 +245,7 @@ const AdminPanel = () => {
       setSelectedAgent("");
       await loadTickets();
       await loadData();
+      setError("");
     } catch (err) {
       console.error("Reassign error:", err);
       setError("Failed to reassign ticket.");
@@ -246,14 +319,11 @@ const AdminPanel = () => {
         </div>
       </div>
 
-
-      {
-        error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )
-      }
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* Enhanced Stats Grid */}
       <section>
@@ -292,40 +362,38 @@ const AdminPanel = () => {
       </section>
 
       {/* Analytics Section */}
-      {
-        analytics && (
-          <section className="grid gap-4 lg:grid-cols-2">
-            {/* Tickets by Category */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Category</h3>
-              <div className="space-y-2">
-                {Object.entries(analytics.tickets_by_category || {}).map(([category, count]) => (
-                  <div key={category} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700">{category}</span>
-                    <span className="font-medium text-slate-900">{count}</span>
-                  </div>
-                ))}
-              </div>
+      {analytics && (
+        <section className="grid gap-4 lg:grid-cols-2">
+          {/* Tickets by Category */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Category</h3>
+            <div className="space-y-2">
+              {Object.entries(analytics.tickets_by_category || {}).map(([category, count]) => (
+                <div key={category} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700">{category}</span>
+                  <span className="font-medium text-slate-900">{count}</span>
+                </div>
+              ))}
             </div>
+          </div>
 
-            {/* Tickets by Priority */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Priority</h3>
-              <div className="space-y-2">
-                {Object.entries(analytics.tickets_by_priority || {}).map(([priority, count]) => (
-                  <div key={priority} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-700">{priority}</span>
-                    <span className={`font-medium ${priority === 'High' ? 'text-red-700' :
-                      priority === 'Medium' ? 'text-amber-700' :
-                        'text-green-700'
-                      }`}>{count}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Tickets by Priority */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">Tickets by Priority</h3>
+            <div className="space-y-2">
+              {Object.entries(analytics.tickets_by_priority || {}).map(([priority, count]) => (
+                <div key={priority} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700">{priority}</span>
+                  <span className={`font-medium ${priority === 'High' ? 'text-red-700' :
+                    priority === 'Medium' ? 'text-amber-700' :
+                      'text-green-700'
+                    }`}>{count}</span>
+                </div>
+              ))}
             </div>
-          </section>
-        )
-      }
+          </div>
+        </section>
+      )}
 
       {/* Agent Management */}
       <section className="space-y-4">
@@ -499,149 +567,192 @@ const AdminPanel = () => {
         </div>
       </section>
 
-      {/* Add Agent Modal */}
-      {
-        showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-slate-900">Create Agent</h3>
-              <form onSubmit={handleCreateAgent} className="mt-4 space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">First Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">Last Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                </div>
-                <div className="relative">
-                  <label className="block text-xs font-medium text-slate-700">Password</label>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="relative">
-                  <label className="block text-xs font-medium text-slate-700">Confirm Password</label>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={formData.password_confirm}
-                    onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition"
-                  >
-                    Create Agent
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )
-      }
-
-      {/* Reassign Modal */}
-      {
-        showReassignModal && selectedTicket && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-              <h3 className="text-lg font-semibold text-slate-900">Reassign Ticket</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Ticket #{selectedTicket.id}: {selectedTicket.subject}
-              </p>
-              <div className="mt-4">
-                <label className="block text-xs font-medium text-slate-700 mb-2">
-                  Select Agent
-                </label>
-                <select
-                  value={selectedAgent}
-                  onChange={(e) => setSelectedAgent(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">Choose an agent...</option>
-                  {agents.map(agent => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.full_name} ({agent.total_tickets || 0} tickets)
-                    </option>
-                  ))}
-                </select>
+      {/* UPDATED - Add Agent Modal with validation */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-slate-900">Create Agent</h3>
+            
+            {/* Show general errors */}
+            {error && (
+              <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {error}
               </div>
-              <div className="flex justify-end gap-2 mt-6">
+            )}
+
+            <form onSubmit={handleCreateAgent} className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700">First Name</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.first_name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, first_name: e.target.value });
+                    setFormErrors({ ...formErrors, first_name: "" });
+                  }}
+                  className={`mt-1 w-full rounded-lg border ${formErrors.first_name ? 'border-red-300' : 'border-slate-300'} px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                />
+                {formErrors.first_name && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.first_name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700">Last Name</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.last_name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, last_name: e.target.value });
+                    setFormErrors({ ...formErrors, last_name: "" });
+                  }}
+                  className={`mt-1 w-full rounded-lg border ${formErrors.last_name ? 'border-red-300' : 'border-slate-300'} px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                />
+                {formErrors.last_name && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.last_name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    setFormErrors({ ...formErrors, email: "" });
+                  }}
+                  className={`mt-1 w-full rounded-lg border ${formErrors.email ? 'border-red-300' : 'border-slate-300'} px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                />
+                {formErrors.email && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>
+                )}
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-medium text-slate-700">Password</label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    setFormErrors({ ...formErrors, password: "" });
+                  }}
+                  className={`mt-1 w-full rounded-lg border ${formErrors.password ? 'border-red-300' : 'border-slate-300'} px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+                {formErrors.password && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>
+                )}
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-medium text-slate-700">Confirm Password</label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password_confirm}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password_confirm: e.target.value });
+                    setFormErrors({ ...formErrors, password_confirm: "" });
+                  }}
+                  className={`mt-1 w-full rounded-lg border ${formErrors.password_confirm ? 'border-red-300' : 'border-slate-300'} px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500`}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+                {formErrors.password_confirm && (
+                  <p className="mt-1 text-xs text-red-600">{formErrors.password_confirm}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowReassignModal(false);
-                    setSelectedTicket(null);
-                    setSelectedAgent("");
+                    setShowModal(false);
+                    setError("");
+                    setFormErrors({});
                   }}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleReassign}
-                  disabled={!selectedAgent}
-                  className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 transition"
+                  type="submit"
+                  className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition"
                 >
-                  Reassign
+                  Create Agent
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Modal */}
+      {showReassignModal && selectedTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-slate-900">Reassign Ticket</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Ticket #{selectedTicket.id}: {selectedTicket.subject}
+            </p>
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-slate-700 mb-2">
+                Select Agent
+              </label>
+              <select
+                value={selectedAgent}
+                onChange={(e) => setSelectedAgent(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              >
+                <option value="">Choose an agent...</option>
+                {agents.map(agent => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.full_name} ({agent.total_tickets || 0} tickets)
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReassignModal(false);
+                  setSelectedTicket(null);
+                  setSelectedAgent("");
+                }}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReassign}
+                disabled={!selectedAgent}
+                className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 transition"
+              >
+                Reassign
+              </button>
             </div>
           </div>
-        )
-      }
-    </div >
+        </div>
+      )}
+    </div>
   );
 };
 

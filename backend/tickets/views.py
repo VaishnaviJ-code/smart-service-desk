@@ -1,9 +1,11 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated 
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q, Count
+from .rag_service import get_rag_service
+from knowledge.models import KBArticle
 from .models import Ticket, Comment, Attachment, CannedResponse
 from .serializers import (
     TicketSerializer,
@@ -658,3 +660,113 @@ def ticket_analytics(request):
     }
     
     return Response(analytics)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Allow non-authenticated users to search
+def search_kb_with_ai(request):
+    """
+    Search KB using RAG and generate AI answer.
+    POST /api/tickets/kb-search/
+    Body: { "query": "How do I reset my password?" }
+    """
+    query = request.data.get('query', '').strip()
+    
+    if not query:
+        return Response({'error': 'Query is required'}, status=400)
+    
+    if len(query) < 3:
+        return Response({
+            'query': query,
+            'ai_answer': 'Please enter at least 3 characters to search.',
+            'articles': [],
+            'found_count': 0
+        })
+    
+    try:
+        from .rag_service import get_rag_service
+        from knowledge.models import KBArticle  # ✅ Import from knowledge app
+        rag = get_rag_service()
+        
+        # Search for similar articles
+        similar_articles = rag.search_similar_articles(query, top_k=5)
+        
+        if not similar_articles:
+            return Response({
+                'query': query,
+                'ai_answer': 'No relevant articles found. Please create a support ticket for assistance.',
+                'articles': [],
+                'found_count': 0
+            })
+        
+        # Get full article details
+        article_ids = [a['article_id'] for a in similar_articles]
+        articles = KBArticle.objects.filter(
+            id__in=article_ids,
+            is_published=True  # ✅ Use is_published instead of status
+        ).values('id', 'title', 'content', 'category')
+        
+        # Map articles to maintain order
+        articles_dict = {a['id']: a for a in articles}
+        ordered_articles = []
+        
+        for i, sim_article in enumerate(similar_articles):
+            aid = sim_article['article_id']
+            if aid in articles_dict:
+                ordered_articles.append({
+                    'id': articles_dict[aid]['id'],
+                    'title': articles_dict[aid]['title'],
+                    'content': articles_dict[aid]['content'],
+                    'category': articles_dict[aid]['category'],
+                    'snippet': sim_article['snippet'],
+                    'relevance_score': sim_article['relevance_score']  # ✅ Use pre-calculated score
+                })
+
+        
+        # Generate AI answer
+        ai_answer = rag.generate_answer(query, ordered_articles[:3])
+        
+        return Response({
+            'query': query,
+            'ai_answer': ai_answer,
+            'articles': ordered_articles,
+            'found_count': len(ordered_articles)
+        })
+    
+    except Exception as e:
+        print(f"RAG search error: {e}")
+        return Response({
+            'error': f'Search failed: {str(e)}'
+        }, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def rebuild_rag_index(request):
+    """
+    Rebuild the entire RAG index from scratch.
+    POST /api/tickets/kb-rebuild-index/
+    """
+    try:
+        from .rag_service import get_rag_service
+        from knowledge.models import KBArticle  # ✅ Import from knowledge app
+
+        rag = get_rag_service()
+        
+        # Get all published articles
+        articles = KBArticle.objects.filter(
+            is_published=True  # ✅ Use is_published
+        ).values('id', 'title', 'content', 'category')
+        
+        # Rebuild index
+        count = rag.rebuild_index(list(articles))
+        
+        return Response({
+            'message': f'Successfully rebuilt index with {count} articles',
+            'count': count
+        })
+    
+    except Exception as e:
+        print(f"Index rebuild error: {e}")
+        return Response({
+            'error': f'Index rebuild failed: {str(e)}'
+        }, status=500)

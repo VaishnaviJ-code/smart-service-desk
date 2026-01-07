@@ -14,6 +14,8 @@ from .views import (
     list_agents,
     reassign_ticket,
     ticket_analytics,
+    search_kb_with_ai,
+    rebuild_rag_index,
 )
 
 router = DefaultRouter()
@@ -47,5 +49,7 @@ urlpatterns = [
     path('my-tickets/', my_tickets, name='my_tickets'),
     path('my-tickets/stats/', my_ticket_stats, name='my_ticket_stats'),
 
+    path('kb-search/', search_kb_with_ai, name='kb-search'),  # ✅ ADD
+    path('kb-rebuild-index/', rebuild_rag_index, name='kb-rebuild-index'),  # ✅ ADD
 
 ]

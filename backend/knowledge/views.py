@@ -1,10 +1,11 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q,Count
 from .models import FAQ, KBArticle, KnowledgeBase
 from .serializers import FAQSerializer, KBArticleSerializer, KnowledgeBaseSerializer
-
+from .models import KBArticle
+from rest_framework.permissions import AllowAny
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     """Public can read, only admin can write"""
@@ -87,3 +88,19 @@ class KnowledgeBaseViewSet(viewsets.ModelViewSet):
     queryset = KnowledgeBase.objects.all()
     serializer_class = KnowledgeBaseSerializer
     permission_classes = [permissions.IsAdminUser]  # Keep this admin-only
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def kb_stats(request):
+    """
+    Get article counts by category
+    """
+    # Count published articles per category
+    stats = {
+        1: KBArticle.objects.filter(category=1, is_published=True).count(),
+        2: KBArticle.objects.filter(category=2, is_published=True).count(),
+        3: KBArticle.objects.filter(category=3, is_published=True).count(),
+        4: KBArticle.objects.filter(category=4, is_published=True).count(),
+    }
+    
+    return Response(stats)
